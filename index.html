@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alvaro_Editor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* Local fonts (fonts/, SIL Open Font License) */
+    @font-face {
+      font-family: "Orbitron"; font-style: normal; font-weight: 400 900; font-display: swap;
+      src: url("fonts/orbitron-latin.woff2") format("woff2");
+    }
+    @font-face {
+      font-family: "Space Grotesk"; font-style: normal; font-weight: 300 700; font-display: swap;
+      src: url("fonts/space-grotesk-latin.woff2") format("woff2");
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: "Space Grotesk"; font-style: normal; font-weight: 300 700; font-display: swap;
+      src: url("fonts/space-grotesk-latin-ext.woff2") format("woff2");
+      unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+    }
+
+    :root {
+      -webkit-text-size-adjust: 100%;
+      tab-size: 4;
+      -webkit-tap-highlight-color: transparent;
+      --bg: #0B0F0D;
+      --bg-elev: #121915;
+      --bg-elev-2: #18221C;
+      --fg: #F5F5F5;
+      --fg-dim: #9AA69F;
+      --fg-faint: #5A6660;
+      --accent: #00C853;
+      --accent-bright: #00C853;
+      --accent-light: #69F0AE;
+      --accent-deep: #0A4D2A;
+      --accent-rgb: 0,200,83;
+      --line: rgba(255,255,255,.12);
+      --line-strong: rgba(255,255,255,.24);
+      --font-display: "Orbitron",var(--font-sans);
+      --track-display: .04em;
+      --font-sans: "Space Grotesk",system-ui,sans-serif;
+      --font-mono: "JetBrains Mono",ui-monospace,monospace;
+      --font-heading: "Orbitron",var(--font-sans);
+      --text-display-1: clamp(3rem,12vw,11rem);
+      --text-display-2: clamp(2rem,6vw,5rem);
+      --text-display-3: clamp(1.5rem,3.5vw,2.75rem);
+      --text-body: clamp(1rem,1.1vw,1.125rem);
+      --text-small: .875rem;
+      --text-label: .6875rem;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 24px;
+      --space-6: 32px;
+      --space-7: 48px;
+      --space-8: 64px;
+      --space-9: 96px;
+      --space-10: 128px;
+      --space-11: 192px;
+      --radius-sm: 2px;
+      --radius: 4px;
+      --radius-lg: 8px;
+      --container: 1440px;
+      --gutter: clamp(16px,5vw,96px);
+      --nav-h: 64px;
+      --ease-out: cubic-bezier(.16,1,.3,1);
+      --ease-inout: cubic-bezier(.65,.05,.36,1);
+      --dur-fast: .2s;
+      --dur: .5s;
+      --dur-slow: .8s;
+      scrollbar-color: #1F2B24 var(--bg);
+    }
+    body {
+      min-height: 100svh;
+      background-color: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-sans);
+      font-size: var(--text-body);
+      margin: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-heading { font-family: var(--font-heading); }
+    .font-display { font-family: var(--font-display); letter-spacing: var(--track-display); }
+    .font-mono { font-family: var(--font-mono); }
+    .gutter { padding-left: var(--gutter); padding-right: var(--gutter); }
+
+    /* 3D channel carousel: items sit on a ring (rotateY + translateZ), the ring spins */
+    .carousel { --card-w: 190px; --radius: 330px; perspective: 1400px; }
+    .carousel-ring {
+      position: relative; width: var(--card-w); height: 250px; margin: 0 auto;
+      transform-style: preserve-3d; animation: carousel-spin 26s linear infinite;
+    }
+    .carousel-item {
+      position: absolute; inset: 0;
+      transform: rotateY(calc(var(--i) * 360deg / var(--n))) translateZ(var(--radius));
+      backface-visibility: hidden;
+    }
+    @keyframes carousel-spin { from { transform: rotateX(-6deg) rotateY(0); } to { transform: rotateX(-6deg) rotateY(-360deg); } }
+    @media (max-width: 640px) { .carousel { --card-w: 150px; --radius: 220px; } }
+
+    /* Space backdrop: fixed nebula glow + star canvas behind all content */
+    .space { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .nebula {
+      background:
+        radial-gradient(ellipse 50% 40% at 15% 20%, rgba(0,200,83,.07), transparent 70%),
+        radial-gradient(ellipse 45% 35% at 85% 65%, rgba(105,240,174,.05), transparent 70%),
+        radial-gradient(ellipse 80% 60% at 50% 110%, rgba(10,77,42,.25), transparent 70%);
+    }
+    main { position: relative; z-index: 1; }
+
+    /* Planet rising at the bottom of the hero; the wrapper fades it out so it never ends in a hard edge */
+    .planet-wrap {
+      position: absolute; inset: 0; pointer-events: none;
+      -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 58%, rgba(0,0,0,.92) 64%, rgba(0,0,0,.78) 70%, rgba(0,0,0,.58) 77%, rgba(0,0,0,.36) 84%, rgba(0,0,0,.17) 91%, rgba(0,0,0,.05) 96%, transparent 100%);
+              mask-image: linear-gradient(180deg, #000 0%, #000 58%, rgba(0,0,0,.92) 64%, rgba(0,0,0,.78) 70%, rgba(0,0,0,.58) 77%, rgba(0,0,0,.36) 84%, rgba(0,0,0,.17) 91%, rgba(0,0,0,.05) 96%, transparent 100%);
+    }
+    .planet {
+      position: absolute; left: 50%; top: 640px; width: 1900px; height: 1900px; margin-left: -950px;
+      border-radius: 50%;
+      background:
+        /* sunlit limb */
+        radial-gradient(ellipse 60% 14% at 50% 0%, rgba(105,240,174,.30), transparent 70%),
+        /* body: teal-emerald lit from above, falling into shadow */
+        radial-gradient(circle at 50% 4%, #1c5a48 0%, #123d31 9%, #0b2620 18%, #08160f 30%, #0B0F0D 42%);
+      box-shadow: 0 -1.5px 3px rgba(215,255,236,1), inset 0 3px 6px rgba(160,255,215,.45);
+      filter: url(#deep-glow-lg);
+    }
+
+    /* Subtle film grain over the whole page */
+    .grain {
+      position: fixed; inset: 0; z-index: 60; pointer-events: none; opacity: .12;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* Orbit ring around the hero title, with a small satellite travelling on it */
+    .orbit {
+      position: absolute; left: 50%; top: 395px; width: 1100px; height: 1100px; margin: -550px 0 0 -550px;
+      border-radius: 50%; border: 1px solid rgba(105,240,174,.13);
+      transform: rotateX(76deg) rotateZ(0deg);
+      animation: orbit 40s linear infinite;
+    }
+    .orbit::after {
+      content: ""; position: absolute; top: -4px; left: 50%; width: 8px; height: 8px; margin-left: -4px;
+      border-radius: 50%; background: #E9FFF4;
+      box-shadow: 0 0 2px #fff, 0 0 5px rgba(105,240,174,.9), 0 0 12px rgba(0,200,83,.6), 0 0 26px rgba(0,200,83,.35), 0 0 50px rgba(0,200,83,.18);
+    }
+    @keyframes orbit { to { transform: rotateX(76deg) rotateZ(360deg); } }
+
+    /* Spaceship cursor (hotspot = nose). On links/buttons the engine fires. */
+    html, body {
+      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cg transform='rotate(-45 16 16)' stroke='%230B0F0D' stroke-width='1.2' stroke-linejoin='round'%3E%3Cpath d='M11 16 6 23v3l5-3zM21 16l5 7v3l-5-3z' fill='%2300C853'/%3E%3Cpath d='M16 1c4 4 5 10 5 17v5H11v-5c0-7 1-13 5-17z' fill='%23F5F5F5'/%3E%3Ccircle cx='16' cy='12' r='2.6' fill='%2300C853'/%3E%3Cpath d='M13 23h6v2h-6z' fill='%239AA69F'/%3E%3C/g%3E%3C/svg%3E") 5 5, auto;
+    }
+    a, button, [role="button"], label, summary {
+      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cg transform='rotate(-45 16 16)' stroke='%230B0F0D' stroke-width='1.2' stroke-linejoin='round'%3E%3Cpath d='M13.5 25Q16 32.5 18.5 25z' fill='%2369F0AE' stroke='none'/%3E%3Cpath d='M14.6 25Q16 29.5 17.4 25z' fill='%23F5F5F5' stroke='none'/%3E%3Cpath d='M11 16 6 23v3l5-3zM21 16l5 7v3l-5-3z' fill='%2300C853'/%3E%3Cpath d='M16 1c4 4 5 10 5 17v5H11v-5c0-7 1-13 5-17z' fill='%23F5F5F5'/%3E%3Ccircle cx='16' cy='12' r='2.6' fill='%2300C853'/%3E%3Cpath d='M13 23h6v2h-6z' fill='%239AA69F'/%3E%3C/g%3E%3C/svg%3E") 5 5, pointer !important;
+    }
+
+    /* Animated spaceship cursor (JS). Replaces the CSS cursor on mouse devices. */
+    .ship-on, .ship-on * { cursor: none !important; }
+    .ship {
+      position: fixed; left: 0; top: 0; z-index: 200; width: 30px; height: 30px; margin: -15px 0 0 -15px;
+      pointer-events: none; opacity: 0; transition: opacity .2s; will-change: transform;
+    }
+    html:not(.ship-on) .ship { display: none; }
+    .ship-rot { position: relative; width: 100%; height: 100%; transition: scale .25s var(--ease-out); }
+    .ship-rot svg { position: relative; width: 100%; height: 100%; filter: drop-shadow(0 0 6px rgba(0,200,83,.35)); }
+    .ship-flame {
+      position: absolute; left: 50%; top: 74%; width: 8px; height: 16px; margin-left: -4px;
+      border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%;
+      background: linear-gradient(#F5F5F5, #69F0AE 35%, rgba(0,200,83,0));
+      transform-origin: top center; transform: scaleY(var(--thrust, .4)); filter: blur(.4px);
+    }
+    .ship.is-hover .ship-rot { scale: 1.2; }
+    .ship-spark {
+      position: fixed; z-index: 199; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%;
+      background: #69F0AE; box-shadow: 0 0 6px #00C853; pointer-events: none;
+      animation: spark .6s ease-out forwards;
+    }
+    @keyframes spark { to { opacity: 0; transform: scale(.2); } }
+
+    /* Buttons fill up from the point where the pointer enters (JS sets --x/--y/--d) */
+    .btn-fill { position: relative; overflow: hidden; isolation: isolate; transition: color .35s, box-shadow .35s, transform .35s var(--ease-out), border-color .35s; }
+    .btn-fill::before {
+      content: ""; position: absolute; z-index: -1; left: var(--x, 50%); top: var(--y, 50%);
+      width: var(--d, 400px); aspect-ratio: 1; border-radius: 50%; background: var(--fill, #00C853);
+      transform: translate(-50%, -50%) scale(0); transition: transform .55s var(--ease-out);
+    }
+    .btn-fill:hover::before { transform: translate(-50%, -50%) scale(1); }
+    .btn-fill:hover { color: var(--fill-text, #0B0F0D); border-color: #00C853; transform: translateY(-2px); }
+    .btn-primary { --fill: #69F0AE; }
+    .btn-primary:hover { box-shadow: 0 0 0 1px rgba(105,240,174,.6), 0 0 22px rgba(105,240,174,.55), 0 0 60px rgba(0,200,83,.4); }
+    .btn-soft { --fill: rgba(0,200,83,.13); --fill-text: inherit; }
+    .btn-soft:hover { transform: none; }
+
+    /* Out-of-focus background objects (depth of field) */    .bokeh { position: absolute; pointer-events: none; filter: blur(var(--b, 3px)); opacity: var(--o, .6); }
+    .bokeh-planet {
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #2f8a69 0%, #145040 38%, #0a2a20 70%, #06120d 100%);
+      box-shadow: inset -18px -14px 30px rgba(0,0,0,.55);
+    }
+    .bokeh-rock {
+      border-radius: 46% 54% 62% 38% / 52% 40% 60% 48%;
+      background: radial-gradient(circle at 30% 30%, #8fa39a 0%, #4e5d56 50%, #232c28 100%);
+      box-shadow: inset -6px -5px 10px rgba(0,0,0,.6);
+    }
+    .bokeh-ringed { border-radius: 50%; background: radial-gradient(circle at 35% 30%, #6fd3a8 0%, #22684f 45%, #0b2a20 100%); }
+    .bokeh-ringed::after {
+      content: ""; position: absolute; left: 50%; top: 50%; width: 190%; height: 46%; transform: translate(-50%, -50%) rotate(-14deg);
+      border-radius: 50%; border: 2px solid rgba(105,240,174,.45);
+    }
+
+    /* Green highlight box behind words */
+    .mark {
+      background: #00C853; color: #0B0F0D; padding: .02em .16em .06em;
+      box-shadow: 0 0 34px rgba(0,200,83,.35);
+      -webkit-box-decoration-break: clone; box-decoration-break: clone;
+    }
+
+    .glow-text { text-shadow: 0 0 28px rgba(0,200,83,.45); }
+
+    /* Floating space objects. Outer element = mouse parallax (JS), inner = slow float (CSS) */
+    .depth { position: absolute; pointer-events: none; transition: transform .6s var(--ease-out); }
+    .float { animation: float 9s ease-in-out infinite; }
+    @keyframes float { 50% { transform: translateY(-14px) rotate(2deg); } }
+
+    .ringed { position: relative; width: 110px; height: 110px; }
+    .ringed .body {
+      position: absolute; inset: 0; border-radius: 50%;
+      background: radial-gradient(circle at 34% 30%, #3f9b7b 0%, #1b5a45 35%, #0d2c22 68%, #07140f 100%);
+      box-shadow: inset -16px -12px 26px rgba(0,0,0,.55);
+    }
+    .ringed .p-ring {
+      position: absolute; left: 50%; top: 50%; width: 220px; height: 56px; margin: -28px 0 0 -110px;
+      border-radius: 50%; border: 2px solid rgba(0,200,83,.7);
+      transform: rotate(-16deg);
+    }
+    .ringed .p-ring.front { clip-path: inset(50% 0 0 0); z-index: 1; } /* front half passes over the planet */
+
+    .moon {
+      width: 52px; height: 52px; border-radius: 50%;
+      background:
+        radial-gradient(circle at 62% 38%, rgba(0,0,0,.18) 0 4px, transparent 5px),
+        radial-gradient(circle at 40% 64%, rgba(0,0,0,.15) 0 6px, transparent 7px),
+        radial-gradient(circle at 32% 30%, #e4eee9 0%, #a9bcb3 40%, #56665f 78%, #2a3530 100%);
+      box-shadow: inset -12px -8px 18px rgba(11,15,13,.8);
+    }
+
+    .sparkle {
+      position: absolute; pointer-events: none; fill: currentColor; animation: twinkle 4s ease-in-out infinite;
+      filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 3px rgba(105,240,174,.9)) drop-shadow(0 0 8px rgba(0,200,83,.6)) drop-shadow(0 0 18px rgba(0,200,83,.35));
+    }
+    .deep-glow { filter: url(#deep-glow); }
+    @keyframes twinkle { 0%, 100% { opacity: .25; transform: scale(.7); } 50% { opacity: 1; transform: scale(1); } }
+
+  </style>
+</head>
+<body>
+
+  <!-- Deep Glow style filters (multi-scale additive bloom of the bright areas) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <filter id="deep-glow" x="-400%" y="-400%" width="900%" height="900%" color-interpolation-filters="sRGB">
+        <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  .5 1.2 .5 0 -.45" result="lum"/>
+        <feComposite in="lum" in2="SourceGraphic" operator="in" result="bright"/>
+        <feGaussianBlur in="bright" stdDeviation="1.5" result="b1"/>
+        <feGaussianBlur in="bright" stdDeviation="5" result="b2"/>
+        <feGaussianBlur in="bright" stdDeviation="13" result="b3"/>
+        <feGaussianBlur in="bright" stdDeviation="30" result="b4"/>
+        <feGaussianBlur in="bright" stdDeviation="62" result="b5"/>
+        <feFlood flood-color="#C8FFE4" flood-opacity=".6"/><feComposite in2="b1" operator="in" result="g1"/>
+        <feFlood flood-color="#69F0AE" flood-opacity=".75"/><feComposite in2="b2" operator="in" result="g2"/>
+        <feFlood flood-color="#00C853" flood-opacity=".6"/><feComposite in2="b3" operator="in" result="g3"/>
+        <feFlood flood-color="#00C853" flood-opacity=".4"/><feComposite in2="b4" operator="in" result="g4"/>
+        <feFlood flood-color="#0A8F45" flood-opacity=".28"/><feComposite in2="b5" operator="in" result="g5"/>
+        <feBlend in="g1" in2="g2" mode="screen" result="s12"/>
+        <feBlend in="s12" in2="g3" mode="screen" result="s123"/>
+        <feBlend in="s123" in2="g4" mode="screen" result="s1234"/>
+        <feBlend in="s1234" in2="g5" mode="screen" result="glow"/>
+        <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <!-- same look for the big planet; bigger blur scales, smaller region (it's 1900px wide) -->
+      <filter id="deep-glow-lg" x="-15%" y="-25%" width="130%" height="135%" color-interpolation-filters="sRGB">
+        <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  .5 1.2 .5 0 -.25" result="lum"/>
+        <feComposite in="lum" in2="SourceGraphic" operator="in" result="bright"/>
+        <feGaussianBlur in="bright" stdDeviation="2" result="b1"/>
+        <feGaussianBlur in="bright" stdDeviation="8" result="b2"/>
+        <feGaussianBlur in="bright" stdDeviation="24" result="b3"/>
+        <feGaussianBlur in="bright" stdDeviation="60" result="b4"/>
+        <feGaussianBlur in="bright" stdDeviation="120" result="b5"/>
+        <feFlood flood-color="#F5FFF9" flood-opacity=".9"/><feComposite in2="b1" operator="in" result="g1"/>
+        <feFlood flood-color="#69F0AE" flood-opacity=".8"/><feComposite in2="b2" operator="in" result="g2"/>
+        <feFlood flood-color="#00C853" flood-opacity=".85"/><feComposite in2="b3" operator="in" result="g3"/>
+        <feFlood flood-color="#00C853" flood-opacity=".65"/><feComposite in2="b4" operator="in" result="g4"/>
+        <feFlood flood-color="#0A8F45" flood-opacity=".5"/><feComposite in2="b5" operator="in" result="g5"/>
+        <feBlend in="g1" in2="g2" mode="screen" result="s12"/>
+        <feBlend in="s12" in2="g3" mode="screen" result="s123"/>
+        <feBlend in="s123" in2="g4" mode="screen" result="s1234"/>
+        <feBlend in="s1234" in2="g5" mode="screen" result="glow"/>
+        <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- Space backdrop -->  <div class="space nebula"></div>
+  <canvas id="stars" class="space"></canvas>
+  <div class="grain"></div>
+
+  <!-- Spaceship cursor (nose points up; JS rotates it toward the movement) -->
+  <div id="ship" class="ship" aria-hidden="true">
+    <div class="ship-rot">
+      <span class="ship-flame"></span>
+      <svg viewBox="0 0 32 32"><g stroke="#0B0F0D" stroke-width="1.2" stroke-linejoin="round"><path d="M11 16 6 23v3l5-3zM21 16l5 7v3l-5-3z" fill="#00C853"/><path d="M16 1c4 4 5 10 5 17v5H11v-5c0-7 1-13 5-17z" fill="#F5F5F5"/><circle cx="16" cy="12" r="2.6" fill="#00C853"/><path d="M13 23h6v2h-6z" fill="#9AA69F"/></g></svg>
+    </div>
+  </div>
+
+  <!-- Floating nav -->
+  <nav class="fixed left-1/2 top-[16px] z-50 flex h-[72px] w-[1038px] max-w-[calc(100%-32px)] -translate-x-1/2 items-center justify-between rounded-[20px] border border-white/10 bg-[rgba(14,24,18,.78)] pl-4 pr-4 backdrop-blur-xl">
+    <div class="flex items-center gap-[14px]">
+      <img src="img/perfil.jpg" alt="Alvaro_Editor" class="h-11 w-11 rounded-full border border-[#00C853]/60 object-cover" />
+      <span class="text-[16px] font-bold text-[#F5F5F5]">Alvaro_Editor</span>
+    </div>
+    <div class="hidden items-center gap-6 text-[16px] text-white/60 md:flex">
+      <a href="#trabajos">Trabajos</a>
+      <a href="#contacto">Contacto</a>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="hidden items-center rounded-full border border-white/10 bg-white/5 p-[3px] text-[12px] font-semibold sm:flex">
+        <span class="rounded-full bg-[#00C853] px-[11px] py-[4px] text-[#0B0F0D]">ES</span>
+        <span class="px-[11px] py-[4px] text-white/50">EN</span>
+      </div>
+      <a href="#trabajos" class="btn-fill hidden rounded-full border border-white/15 px-4 py-[11px] text-[16px] font-medium text-white/50 lg:block">Ver mi trabajo</a>
+      <a href="#contacto" class="btn-fill btn-primary rounded-full bg-[#00C853] px-5 py-[11px] text-[16px] font-semibold text-[#0B0F0D]">Trabajemos juntos →</a>
+    </div>
+  </nav>
+
+  <main>
+  <!-- Hero -->
+  <section class="relative h-[900px] overflow-hidden [perspective:1600px]">
+    <div class="orbit pointer-events-none"></div>
+
+    <!-- Out-of-focus background objects -->
+    <span class="bokeh bokeh-planet left-[-60px] top-[470px] h-[170px] w-[170px] [--b:7px] [--o:.55]"></span>
+    <span class="bokeh bokeh-rock right-[30%] top-[130px] h-[22px] w-[28px] [--b:2px] [--o:.5]"></span>
+    <span class="bokeh bokeh-rock left-[30%] top-[600px] h-[14px] w-[18px] [--b:1.5px] [--o:.45]"></span>
+    <span class="bokeh bokeh-planet right-[4%] top-[640px] h-[46px] w-[46px] [--b:3px] [--o:.5]"></span>
+
+    <!-- Space objects -->
+    <div class="depth right-[9%] top-[150px] hidden md:block" data-depth="18">
+      <div class="float ringed">
+        <span class="p-ring deep-glow"></span>
+        <span class="body deep-glow"></span>
+        <span class="p-ring front deep-glow"></span>
+      </div>
+    </div>
+    <div class="depth left-[12%] top-[205px] hidden md:block" data-depth="10">
+      <div class="float [animation-delay:-4s] [animation-duration:11s]"><div class="moon deep-glow"></div></div>
+    </div>
+    <svg class="sparkle left-[22%] top-[300px] h-4 w-4 text-[#69F0AE]" viewBox="0 0 24 24"><path d="M12 0c.6 6.4 5.6 11.4 12 12-6.4.6-11.4 5.6-12 12-.6-6.4-5.6-11.4-12-12C6.4 11.4 11.4 6.4 12 0z"/></svg>
+    <svg class="sparkle right-[24%] top-[255px] h-3 w-3 text-[#F5F5F5] [animation-delay:-1.5s]" viewBox="0 0 24 24"><path d="M12 0c.6 6.4 5.6 11.4 12 12-6.4.6-11.4 5.6-12 12-.6-6.4-5.6-11.4-12-12C6.4 11.4 11.4 6.4 12 0z"/></svg>
+    <svg class="sparkle right-[16%] top-[560px] h-[14px] w-[14px] text-[#69F0AE] [animation-delay:-3s]" viewBox="0 0 24 24"><path d="M12 0c.6 6.4 5.6 11.4 12 12-6.4.6-11.4 5.6-12 12-.6-6.4-5.6-11.4-12-12C6.4 11.4 11.4 6.4 12 0z"/></svg>
+    <div class="planet-wrap"><div class="planet"></div></div>
+
+    <div class="relative flex flex-col items-center pt-[322px]">
+      <h1 class="font-display flex items-center whitespace-nowrap text-[clamp(1.6rem,7.4vw,100px)] font-extrabold uppercase leading-[1] text-[#F5F5F5]">
+        Alvaro_<span class="mark ml-[0.08em]">Editor</span>
+        <svg viewBox="0 0 24 24" class="ml-[0.2em] h-[0.6em] w-[0.6em] shrink-0">
+          <path fill="rgba(0,200,83,.4)" d="M12 1l2.4 1.8 3-.3 1.2 2.8 2.8 1.2-.3 3L23 12l-1.8 2.4.3 3-2.8 1.2-1.2 2.8-3-.3L12 23l-2.4-1.8-3 .3-1.2-2.8-2.8-1.2.3-3L1 12l1.8-2.4-.3-3 2.8-1.2 1.2-2.8 3 .3z"/>
+          <path d="M7.6 12.3l3 3 5.8-6" fill="none" stroke="rgba(245,245,245,.85)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </h1>
+      <p class="mt-[30px] px-4 text-center text-[17px] leading-[1.9] tracking-[0.02em]"><span class="mark px-[10px] py-[5px] font-medium">Trabajemos juntos para escalar tu negocio y que tengas una marca que venda.</span></p>
+      <div class="mt-[32px] flex items-center gap-3">
+        <a href="#contacto" class="btn-fill btn-primary flex h-[56px] items-center rounded-full bg-[#00C853] shadow-[0_0_30px_rgba(0,200,83,.45)] px-8 text-[17px] font-semibold uppercase text-[#0B0F0D]">Trabajemos juntos&nbsp;🔥</a>
+        <a href="#trabajos" class="btn-fill flex h-[58px] items-center rounded-full border border-white/25 bg-white/5 px-8 backdrop-blur-sm text-[17px] font-medium text-[#F5F5F5]">Ver trabajo</a>
+      </div>
+      <svg viewBox="0 0 48 20" class="mt-[20px] h-[20px] w-[48px] fill-none stroke-white/25" stroke-width="2" stroke-linecap="round"><path d="M2 3l22 8 22-8M8 12l16 6 16-6" stroke-opacity=".5"/></svg>
+    </div>
+  </section>
+
+  <!-- Mis Clientes -->
+  <section class="relative overflow-x-clip border-b border-white/10 pb-[96px] pt-[93px]">
+    <span class="bokeh bokeh-ringed right-[7%] top-[70px] h-[60px] w-[60px] [--b:4px] [--o:.45]"></span>
+    <span class="bokeh bokeh-rock left-[8%] top-[300px] h-[30px] w-[38px] [--b:3px] [--o:.45]"></span>
+    <h2 class="font-heading glow-text text-center text-[34px] font-bold uppercase leading-[48px] tracking-[0.06em] text-[#00C853]">Mis Clientes</h2>
+    <p class="mt-[20px] text-center text-[16px] font-light text-[var(--fg-dim)]">Creadores de contenido con los que he trabajado!</p>
+
+    <div class="carousel mt-[50px] overflow-x-clip py-[40px]">
+      <div id="channels" class="carousel-ring"></div>
+    </div>
+  </section>
+
+  <!-- Mis mejores vídeos -->
+  <section id="trabajos" class="px-4 pb-[121px] pt-[130px] md:px-[61px]">
+    <p class="font-mono text-center text-[10px] uppercase tracking-[0.3em] text-[#69F0AE]">Portafolio</p>
+    <h2 class="font-heading mt-[18px] text-center text-[34px] font-bold uppercase leading-[52px] tracking-[0.06em] text-[#F5F5F5]">
+      Mis mejores <span class="glow-text text-[#00C853]">vídeos</span>
+    </h2>
+
+    <div id="videos" class="[filter:drop-shadow(0_0_26px_rgba(0,200,83,.28))_drop-shadow(0_0_70px_rgba(105,240,174,.12))] mx-auto mt-[60px] grid max-w-[var(--container)] grid-cols-1 gap-8 md:grid-cols-2"></div>
+
+    <div class="mt-[97px] flex justify-center">
+      <a href="#contacto" class="btn-fill btn-primary inline-block rounded-full bg-[#00C853] px-8 py-[16px] shadow-[0_0_30px_rgba(0,200,83,.45)] text-[17px] font-semibold uppercase leading-[22px] text-[#0B0F0D]">Trabajemos juntos 🔥 →</a>
+    </div>
+  </section>
+
+  <!-- Hablemos -->
+  <section id="contacto" class="gutter relative flex h-[873px] flex-col items-center overflow-x-clip pt-[222px]">
+    <span class="bokeh bokeh-planet right-[-80px] top-[120px] h-[240px] w-[240px] [--b:9px] [--o:.5]"></span>
+    <span class="bokeh bokeh-ringed left-[10%] top-[560px] h-[44px] w-[44px] [--b:3px] [--o:.45]"></span>
+    <span class="bokeh bokeh-rock left-[22%] top-[150px] h-[16px] w-[20px] [--b:2px] [--o:.4]"></span>
+    <h2 class="font-display text-[clamp(2.5rem,9vw,8rem)] font-extrabold uppercase leading-[1] text-[#F5F5F5]">Hablemos</h2>
+    <p class="mt-[20px] max-w-[450px] text-center text-[16px] font-light leading-[24px] text-[var(--fg-dim)]">Escríbeme por X y te contesto rápido. Cuéntame qué video tienes en mente.</p>
+
+    <div class="mt-[40px] flex w-full max-w-[448px] flex-col gap-4">
+      <a href="https://x.com/oH40655" target="_blank" rel="noopener" class="btn-fill btn-soft group relative flex h-[85px] items-center gap-4 overflow-hidden rounded-[4px] border border-[#00C853] bg-[rgba(18,25,21,.75)] px-5 backdrop-blur-sm">
+        <svg viewBox="0 0 24 24" class="h-[22px] w-[22px] fill-white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        <div class="flex-1">
+          <p class="text-[16px] font-semibold text-[#F5F5F5]">Alvaro_Editor</p>
+          <p class="font-mono mt-[4px] text-[8.5px] uppercase tracking-[0.12em] text-[var(--fg-dim)]">Mándame un DM — es la vía más rápida</p>
+        </div>
+        <span class="flex h-9 w-9 items-center justify-center rounded-full border border-[#00C853] text-[13px] text-[#F5F5F5] transition-all duration-300 group-hover:rotate-45 group-hover:bg-[#00C853] group-hover:text-[#0B0F0D]">↗</span>
+        <span class="absolute bottom-0 left-0 h-[3px] w-[148px] bg-[#00C853] shadow-[0_0_10px_rgba(0,200,83,.7)] transition-all duration-500 ease-out group-hover:w-full"></span>
+      </a>
+      <a href="https://www.instagram.com/alixi0n/" target="_blank" rel="noopener" class="btn-fill btn-soft group relative flex h-[85px] items-center gap-4 overflow-hidden rounded-[4px] border border-white/30 bg-[rgba(18,25,21,.75)] px-5 backdrop-blur-sm">
+        <svg viewBox="0 0 24 24" class="h-[26px] w-[26px] fill-none stroke-white" stroke-width="2"><rect x="2.5" y="2.5" width="19" height="19" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.6" cy="6.4" r=".9" class="fill-white" stroke="none"/></svg>
+        <div class="flex-1">
+          <p class="text-[16px] font-semibold text-[#F5F5F5]">@alixi0n</p>
+          <p class="font-mono mt-[4px] text-[8.5px] uppercase tracking-[0.12em] text-[var(--fg-dim)]">Mándame un DM por aquí si no sabes usar Twitter</p>
+        </div>
+        <span class="flex h-9 w-9 items-center justify-center rounded-full border border-[#00C853] text-[13px] text-[#F5F5F5] transition-all duration-300 group-hover:rotate-45 group-hover:bg-[#00C853] group-hover:text-[#0B0F0D]">↗</span>
+        <span class="absolute bottom-0 left-0 h-[3px] w-[148px] bg-[#00C853] shadow-[0_0_10px_rgba(0,200,83,.7)] transition-all duration-500 ease-out group-hover:w-full"></span>
+      </a>
+    </div>
+  </section>
+  </main>
+
+  <style>
+    .verified {
+      display: inline-block; width: 13px; height: 13px; border-radius: 9999px;
+      background: #00C853 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 8.2l2.2 2.2 4.8-4.8' fill='none' stroke='%230B0F0D' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/9px no-repeat;
+    }
+  </style>
+
+  <!-- Video modal -->
+  <div id="video-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/80 p-4 backdrop-blur-md md:p-10" role="dialog" aria-modal="true" aria-labelledby="video-modal-title">
+    <div class="w-full max-w-[1200px]">
+      <div class="mb-3 flex items-center justify-between gap-4">
+        <p id="video-modal-title" class="truncate text-[16px] font-semibold text-[#F5F5F5]"></p>
+        <button type="button" data-close aria-label="Cerrar" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-[#F5F5F5] transition-colors hover:bg-white/20">
+          <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div id="video-modal-frame" class="relative aspect-video w-full overflow-hidden rounded-[10px] border border-white/10 bg-black shadow-[0_30px_80px_rgba(0,0,0,.6)]"></div>
+    </div>
+  </div>
+
+  <script>
+    // Channel carousel (images in canales/). The list is doubled so the 3D ring looks full.
+    const channels = [
+      ['Juan Carlos Postigo', 'canales/Juan carlos postigo.jpg'],
+      ['Julio Gutierrez', 'canales/Julio gutierrez.jpg'],
+      ['Raleey', 'canales/Raleey.jpg'],
+      ['Felipe Riveros', 'canales/Felipe Riveros.jpg'],
+    ];
+    const ring = [...channels, ...channels];
+    const channelsEl = document.getElementById('channels');
+    channelsEl.style.setProperty('--n', ring.length);
+    channelsEl.innerHTML = ring.map(([name, img], i) => `
+      <div class="carousel-item" style="--i:${i}">
+        <div class="flex h-full flex-col items-center justify-center gap-4 rounded-[20px] border border-white/10 bg-[rgba(18,25,21,.9)] px-4 shadow-[0_0_40px_rgba(0,200,83,.15)]">
+          <img src="${encodeURI(img)}" alt="${name}" class="h-[120px] w-[120px] rounded-full object-cover ring-2 ring-[#00C853] ring-offset-4 ring-offset-[#121915]" />
+          <p class="text-center text-[17px] font-semibold leading-[22px] text-[#F5F5F5]">${name}</p>
+        </div>
+      </div>`).join('');
+
+    // Video cards
+    // youtube: video id · x: mp4 downloaded into videos/ (video.twimg.com returns 403 to other sites)
+    const videos = [
+      { type: 'youtube', id: 'RLO8kmnJOQ0', title: '5 Claves Para Comenzar en MMA (100% REAL) 🥊', author: 'Juan Carlos Postigo' },
+      { type: 'youtube', id: '8XQiqw6olJ0', title: 'Por Esto 5 Errores No Ganas $10,000 Dolares al mes Como Editor De Video', author: 'Julio Gutierrez' },
+      { type: 'x', title: 'Trabajoooo ✍️', author: 'Alvaro l Editor de Videos',
+        src: 'videos/trabajo.mp4',
+        thumb: 'videos/trabajo.jpg' },
+      { type: 'x', title: 'Animaciones minimalistas para un cliente 😎', author: 'Alvaro l Editor de Videos',
+        src: 'videos/animaciones-minimalistas.mp4',
+        thumb: 'videos/animaciones-minimalistas.jpg' },
+      { type: 'youtube', id: 'mlONViWf1rY', title: 'Cómo Hacer Miniaturas Irresistibles para Automatización', author: 'Raleey' },
+      { type: 'x', title: 'Un vídeo editado para mi buen amigo Ricardo', author: 'Alvaro l Editor de Videos',
+        src: 'videos/ricardo.mp4',
+        thumb: 'videos/ricardo.jpg' },
+    ];
+    const thumbOf = v => v.type === 'youtube' ? `https://i.ytimg.com/vi/${v.id}/maxresdefault.jpg` : v.thumb;
+    const grid = document.getElementById('videos');
+    grid.innerHTML = videos.map((v, i) => `
+      <article class="overflow-hidden rounded-[14px] border border-white/10 bg-[#F5F5F5] ${videos.length % 2 && i === videos.length - 1 ? 'md:col-span-2 md:mx-auto md:w-[calc(50%-16px)]' : ''}">
+        <div class="player relative aspect-video bg-black">
+          <img src="${thumbOf(v)}" alt="" class="h-full w-full object-cover" />
+          <button type="button" data-i="${i}" aria-label="Reproducir vídeo" class="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#00C853] shadow-[0_0_24px_rgba(0,200,83,.5)] transition-transform hover:scale-110">
+            <svg viewBox="0 0 12 12" class="ml-[2px] h-3 w-3 fill-[#0B0F0D]"><path d="M2 1l9 5-9 5z"/></svg>
+          </button>
+        </div>
+        <div class="px-5 pb-[18px] pt-[16px]">
+          <h3 class="text-[18px] font-semibold leading-[24px] text-[#0B0F0D]">${v.title}</h3>
+          <p class="mt-[6px] flex items-center gap-[6px] text-[13px] font-normal tracking-[0.03em] text-[#3A4540]">${v.author} <span class="verified !h-[11px] !w-[11px]"></span></p>
+        </div>
+      </article>`).join('');
+
+    // Button fill: the circle grows from where the pointer enters and shrinks back toward where it leaves
+    document.querySelectorAll('.btn-fill').forEach(btn => {
+      const place = e => {
+        const r = btn.getBoundingClientRect();
+        btn.style.setProperty('--x', e.clientX - r.left + 'px');
+        btn.style.setProperty('--y', e.clientY - r.top + 'px');
+        btn.style.setProperty('--d', 2.2 * Math.hypot(r.width, r.height) + 'px');
+      };
+      btn.addEventListener('pointerenter', place);
+      btn.addEventListener('pointerleave', place);
+    });
+
+    // Mouse devices get the animated spaceship cursor (hidden while a video is open)
+    const shipCapable = matchMedia('(pointer: fine)').matches;
+
+    // Video modal: opens a large player over the page, closing removes it (stops playback)
+    const modal = document.getElementById('video-modal');
+    const modalFrame = document.getElementById('video-modal-frame');
+    const modalTitle = document.getElementById('video-modal-title');
+
+    // YouTube refuses to embed on pages opened as file:// (Error 153), so explain instead
+    const fileNotice = v => `
+      <div class="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <p class="text-[18px] font-semibold text-[#F5F5F5]">YouTube no reproduce vídeos con la web abierta como archivo</p>
+        <p class="max-w-[520px] text-[15px] font-light text-[var(--fg-dim)]">Abre la web con <b class="text-[#F5F5F5]">abrir-web.bat</b> (se abrirá en http://localhost:5500) y el vídeo se verá aquí mismo. Una vez publicada en internet funcionará sin más.</p>
+        <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener" class="rounded-full bg-[#00C853] px-6 py-3 text-[15px] font-semibold text-[#0B0F0D]">Ver en YouTube</a>
+      </div>`;
+
+    const openVideo = v => {
+      modalFrame.innerHTML = v.type === 'youtube' && location.protocol === 'file:'
+        ? fileNotice(v)
+        : v.type === 'youtube'
+        ? `<iframe class="absolute inset-0 h-full w-full" src="https://www.youtube.com/embed/${v.id}?autoplay=1&rel=0&playsinline=1" title="${v.title}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`
+        : `<video class="absolute inset-0 h-full w-full bg-black" src="${v.src}" poster="${v.thumb}" controls autoplay playsinline></video>`;
+      modalTitle.textContent = v.title;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.body.style.overflow = 'hidden';
+      document.documentElement.classList.remove('ship-on');
+    };
+    const closeVideo = () => {
+      modalFrame.innerHTML = '';
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      document.body.style.overflow = '';
+      if (shipCapable) document.documentElement.classList.add('ship-on');
+    };
+
+    grid.addEventListener('click', e => {
+      const btn = e.target.closest('button[data-i]');
+      if (btn) openVideo(videos[btn.dataset.i]);
+    });
+    modal.addEventListener('click', e => {
+      if (e.target === modal || e.target.closest('[data-close]')) closeVideo();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeVideo();
+    });
+
+    // Starfield: 3 depth layers (scroll + mouse parallax), twinkle and the odd shooting star
+    (() => {
+      const canvas = document.getElementById('stars');
+      const ctx = canvas.getContext('2d');
+      // density = stars per px², scroll = how much the layer moves with scroll, shift = mouse parallax in px
+      const layers = [
+        { density: .00006, size: [.3, .8], scroll: .03, shift: 4 },
+        { density: .000024, size: [.6, 1.2], scroll: .08, shift: 10 },
+        { density: .000007, size: [1, 1.7], scroll: .16, shift: 22 },
+      ];
+      let w, h, stars = [], mouse = { x: 0, y: 0 }, eased = { x: 0, y: 0 }, shooting = null, nextShot = 2000;
+
+      const resize = () => {
+        const dpr = Math.min(devicePixelRatio || 1, 2);
+        w = innerWidth; h = innerHeight;
+        canvas.width = w * dpr; canvas.height = h * dpr;
+        canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        stars = layers.flatMap((layer, li) => Array.from({ length: Math.round(w * h * layer.density) }, () => ({
+          x: Math.random() * w, y: Math.random() * h, li,
+          r: layer.size[0] + Math.random() * (layer.size[1] - layer.size[0]),
+          phase: Math.random() * Math.PI * 2, speed: .4 + Math.random() * 1.4,
+          green: Math.random() < .12,
+        })));
+        draw(performance.now()); // resizing clears the canvas, so repaint right away
+      };
+
+      const draw = t => {
+        ctx.clearRect(0, 0, w, h);
+        eased.x += (mouse.x - eased.x) * .05;
+        eased.y += (mouse.y - eased.y) * .05;
+        for (const s of stars) {
+          const layer = layers[s.li];
+          const x = ((s.x + eased.x * layer.shift) % w + w) % w;
+          const y = ((s.y - scrollY * layer.scroll + eased.y * layer.shift) % h + h) % h;
+          ctx.globalAlpha = .35 + .65 * Math.abs(Math.sin(s.phase + t * .001 * s.speed));
+          ctx.fillStyle = s.green ? '#69F0AE' : '#F5F5F5';
+          ctx.beginPath(); ctx.arc(x, y, s.r, 0, Math.PI * 2); ctx.fill();
+        }
+        if (!shooting && t > nextShot) {
+          // random start in the upper area, heading down-left at a slightly varied angle
+          const angle = (20 + Math.random() * 18) * Math.PI / 180;
+          shooting = { x: w * (.3 + Math.random() * .7), y: Math.random() * h * .45, born: t,
+            dx: -Math.cos(angle), dy: Math.sin(angle), dist: 300 + Math.random() * 250, len: 90 + Math.random() * 90, dur: 700 + Math.random() * 500 };
+          nextShot = t + 4000 + Math.random() * 6000;
+        }
+        if (shooting) {
+          const sh = shooting, p = (t - sh.born) / sh.dur;
+          if (p >= 1) shooting = null;
+          else {
+            // head moves along the path; the tail trails behind and fades in, then everything fades out
+            const hx = sh.x + sh.dx * sh.dist * p, hy = sh.y + sh.dy * sh.dist * p;
+            const tx = hx - sh.dx * sh.len, ty = hy - sh.dy * sh.len;
+            const grad = ctx.createLinearGradient(hx, hy, tx, ty);
+            grad.addColorStop(0, 'rgba(245,245,245,.95)'); grad.addColorStop(.3, 'rgba(105,240,174,.45)'); grad.addColorStop(1, 'rgba(105,240,174,0)');
+            ctx.globalAlpha = Math.min(1, p * 5) * (1 - p); ctx.strokeStyle = grad; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke();
+            ctx.fillStyle = '#F5F5F5'; ctx.beginPath(); ctx.arc(hx, hy, 1.4, 0, Math.PI * 2); ctx.fill();
+          }
+        }
+        ctx.globalAlpha = 1;
+      };
+      const loop = t => { draw(t); requestAnimationFrame(loop); };
+
+      addEventListener('resize', resize);
+      const depthEls = document.querySelectorAll('[data-depth]');
+      addEventListener('pointermove', e => {
+        mouse.x = e.clientX / w - .5; mouse.y = e.clientY / h - .5;
+        depthEls.forEach(el => {
+          const d = +el.dataset.depth;
+          el.style.transform = `translate(${mouse.x * d}px, ${mouse.y * d}px)`;
+        });
+      });
+      resize();
+      requestAnimationFrame(loop);
+    })();
+
+    // Spaceship cursor: follows the pointer and turns to face the direction it moves
+    (() => {
+      if (!shipCapable) return;
+      const ship = document.getElementById('ship');
+      const rot = ship.firstElementChild;
+      document.documentElement.classList.add('ship-on');
+      let x = 0, y = 0, tx = 0, ty = 0, angle = 0, targetAngle = 0, thrust = .4, lastSpark = 0, seen = false;
+
+      addEventListener('pointermove', e => {
+        tx = e.clientX; ty = e.clientY;
+        if (!seen) { x = tx; y = ty; seen = true; }
+        ship.style.opacity = 1;
+      });
+      document.addEventListener('mouseout', e => { if (!e.relatedTarget) ship.style.opacity = 0; });
+      addEventListener('pointerover', e => {
+        ship.classList.toggle('is-hover', !!e.target.closest('a, button, [role="button"]'));
+      });
+
+      // little engine sparks left behind while flying
+      const spark = () => {
+        const rad = (angle - 90) * Math.PI / 180;
+        const el = document.createElement('span');
+        el.className = 'ship-spark';
+        el.style.left = (x - Math.cos(rad) * 15 + (Math.random() - .5) * 4) + 'px';
+        el.style.top = (y - Math.sin(rad) * 15 + (Math.random() - .5) * 4) + 'px';
+        document.body.appendChild(el);
+        el.addEventListener('animationend', () => el.remove());
+      };
+
+      const tick = t => {
+        const dx = tx - x, dy = ty - y, speed = Math.hypot(dx, dy);
+        x += dx * .5; y += dy * .5;
+        // nose points up (0deg), so movement angle + 90 makes it face where it's going
+        if (speed > 1.5) targetAngle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+        angle += (((targetAngle - angle) % 360 + 540) % 360 - 180) * .22; // shortest turn
+        thrust += (Math.min(1.7, .4 + speed / 16) - thrust) * .2;
+        ship.style.transform = `translate(${x}px, ${y}px)`;
+        rot.style.transform = `rotate(${angle}deg)`;
+        rot.style.setProperty('--thrust', (thrust + Math.random() * .15).toFixed(2));
+        if (speed > 4 && t - lastSpark > 30) { lastSpark = t; spark(); }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    })();
+  </script>
+</body>
+</html>
