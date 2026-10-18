@@ -482,20 +482,20 @@
       </div>`).join('');
 
     // Video cards
-    // youtube: video id · x: mp4 downloaded into videos/ (video.twimg.com returns 403 to other sites)
+    // youtube: video id · x / local: mp4 in videos/ (X clips are downloaded: video.twimg.com returns 403 to other sites)
     const videos = [
       { type: 'youtube', id: 'RLO8kmnJOQ0', title: '5 Claves Para Comenzar en MMA (100% REAL) 🥊', author: 'Juan Carlos Postigo' },
+      { type: 'local', title: 'Podcast', author: 'Alvaro l Editor de Videos',
+        src: 'videos/podcast-web.mp4',
+        thumb: 'videos/podcast.jpg' },
+      { type: 'local', title: 'Mi historia', author: 'David Pérez',
+        src: 'videos/mi-historia-david-perez-web.mp4',
+        thumb: 'videos/mi-historia-david-perez.jpg' },
       { type: 'youtube', id: '8XQiqw6olJ0', title: 'Por Esto 5 Errores No Ganas $10,000 Dolares al mes Como Editor De Video', author: 'Julio Gutierrez' },
+      { type: 'youtube', id: 'mlONViWf1rY', title: 'Cómo Hacer Miniaturas Irresistibles para Automatización', author: 'Raleey' },
       { type: 'x', title: 'Trabajoooo ✍️', author: 'Alvaro l Editor de Videos',
         src: 'videos/trabajo.mp4',
         thumb: 'videos/trabajo.jpg' },
-      { type: 'x', title: 'Animaciones minimalistas para un cliente 😎', author: 'Alvaro l Editor de Videos',
-        src: 'videos/animaciones-minimalistas.mp4',
-        thumb: 'videos/animaciones-minimalistas.jpg' },
-      { type: 'youtube', id: 'mlONViWf1rY', title: 'Cómo Hacer Miniaturas Irresistibles para Automatización', author: 'Raleey' },
-      { type: 'x', title: 'Un vídeo editado para mi buen amigo Ricardo', author: 'Alvaro l Editor de Videos',
-        src: 'videos/ricardo.mp4',
-        thumb: 'videos/ricardo.jpg' },
     ];
     const thumbOf = v => v.type === 'youtube' ? `https://i.ytimg.com/vi/${v.id}/maxresdefault.jpg` : v.thumb;
     const grid = document.getElementById('videos');
